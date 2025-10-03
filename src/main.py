@@ -14,6 +14,7 @@ from src.components.llm import get_ai_suggestion
 from src.components.weather import get_weather
 from src.components.tts import generate_tts
 from src.components.utils import log_message
+import re
 
 st.set_page_config(page_title="Japanese Weather Travel Chatbot", layout="wide")
 
@@ -70,10 +71,14 @@ if process_input:
     response = get_ai_suggestion(full_prompt)
     log_message(f"AI response: {response}")
 
+    # Clean response for TTS (strip Markdown)
+    clean_response = re.sub(r'\*\*(.*?)\*\*', r'\1', response)
+    clean_response = re.sub(r'\*(.*?)\*', r'\1', clean_response)
+
     st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Generate TTS
-    audio_file = generate_tts(response)
+    # Generate TTS with cleaned text
+    audio_file = generate_tts(clean_response)
     log_message(f"TTS file generated: {audio_file}")
     st.session_state.tts_file = audio_file
 

@@ -9,7 +9,7 @@ def get_ai_suggestion(prompt):
     log_message(f"Calling LLM with prompt: {prompt}")
     chat_completion = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that suggests activities based on weather and theme in Japanese."},
+            {"role": "system", "content": "You are a helpful assistant that suggests activities based on weather and theme in Japanese. Respond in plain text without any Markdown formatting like bold or italics. Use actual Japanese characters (Kanji, Hiragana, Katakana) and avoid Romaji entirely. For example, instead of 'konnichiwa', write 'こんにちは'."},
             {"role": "user", "content": prompt},
         ],
         model="llama-3.1-8b-instant",
