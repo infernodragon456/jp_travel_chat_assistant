@@ -8,6 +8,7 @@ venv/
 
 # Streamlit secrets (commit a template if needed, ignore with real keys)
 .streamlit/secrets.toml
+src/.streamlit/secrets.toml
 
 # Python caches
 __pycache__/
