@@ -7,3 +7,8 @@ openai-whisper
 torch
 transformers
 gtts
+altair
+folium
+streamlit-folium
+icalendar
+googletrans==4.0.0-rc1

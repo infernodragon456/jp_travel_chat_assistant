@@ -26,3 +26,15 @@ This is a Streamlit-based chatbot that supports Japanese voice input using Whisp
 - The bot fetches weather, generates suggestions, and plays audio response.
 
 For a working demo, deploy to Streamlit Cloud or run locally and record a video.
+
+## New Features
+- Interactive weather visualizations and maps
+- Rich activity cards with images and links
+- Auto/manual location detection
+- Multilingual support (Japanese/English)
+- Itinerary building and export
+- User preference saving
+- Voice command navigation
+- External service integrations
+- Save/share functionality
+- Daily challenges

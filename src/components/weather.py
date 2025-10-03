@@ -12,7 +12,7 @@ def get_weather(location):
         return {"error": "Location not found"}
     
     lat, lon = loc.latitude, loc.longitude
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=Asia%2FTokyo"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&hourly=temperature_2m&timezone=Asia%2FTokyo"
     response = requests.get(url)
     log_message(f"Weather API response status: {response.status_code}")
     return response.json()
