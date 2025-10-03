@@ -1,0 +1,9 @@
+streamlit>=1.25.0
+requests
+geopy
+groq
+streamlit-mic-recorder
+openai-whisper
+torch
+transformers
+gtts

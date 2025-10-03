@@ -1,0 +1,29 @@
+# Python/Streamlit project ignores
+
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+
+# Streamlit secrets (commit a template if needed, ignore with real keys)
+.streamlit/secrets.toml
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Temporary files from the app
+temp_audio.wav
+response.mp3
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Other common ignores
+*.log
+*.tmp
+*.bak
