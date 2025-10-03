@@ -10,6 +10,6 @@ def get_ai_suggestion(prompt):
             {"role": "system", "content": "You are a helpful assistant that suggests activities based on weather and theme in Japanese."},
             {"role": "user", "content": prompt},
         ],
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
     )
     return chat_completion.choices[0].message.content
