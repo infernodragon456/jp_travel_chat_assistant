@@ -2,6 +2,8 @@ import streamlit as st
 import altair as alt
 import folium
 from streamlit_folium import folium_static
+from geopy.geocoders import Nominatim
+import pandas as pd
 from src.components.utils import log_message
 
 def render_weather_visualization(weather_data, location):
@@ -22,7 +24,11 @@ def render_weather_visualization(weather_data, location):
     
     # Map
     geolocator = Nominatim(user_agent="jp_travel_chatbot")
-    loc = geolocator.geocode(location)
+    try:
+        loc = geolocator.geocode(location)
+    except Exception as e:
+        log_message(f"Geocode error in visualization: {e}")
+        loc = None
     if loc:
         m = folium.Map(location=[loc.latitude, loc.longitude], zoom_start=12)
         folium.Marker([loc.latitude, loc.longitude], popup=location).add_to(m)

@@ -10,16 +10,22 @@ from src.components.chat import display_chat_history
 from src.components.weather import render_weather_component
 from src.components.asr import render_voice_input
 from src.components.tts import render_tts_output
-from src.components.llm import get_ai_suggestion
+from src.components.llm import (
+    get_ai_suggestion,
+    get_location_structured,
+    get_activities_structured,
+)
 from src.components.weather import get_weather
 from src.components.tts import generate_tts
 from src.components.utils import log_message
+from src.components.parsers import sanitize_text
 import re
+import streamlit_shadcn_ui as ui
+from datetime import datetime
 
 from src.components.visualizations import render_weather_visualization
 from src.components.activity_cards import render_activity_card
 from src.components.location_services import get_user_location
-from src.components.multilingual import translate_text, render_language_selector
 from src.components.itinerary import build_itinerary
 from src.components.personalization import get_user_preferences
 from src.components.voice_navigation import process_voice_command
@@ -29,24 +35,30 @@ from src.components.challenges import render_challenge
 
 st.set_page_config(page_title="Japanese Weather Travel Chatbot", layout="wide")
 
-st.title("Japanese Weather Travel Chatbot")
+ui.subheader("Japanese Weather Travel Chatbot")
 
-st.sidebar.title("Settings")
-theme = st.sidebar.selectbox("Theme", ["Travel", "Outings", "Fashion", "Sports"], key="theme")
-lang = render_language_selector()
+with st.sidebar:
+    ui.subheader("Settings")
+    theme = st.selectbox("Theme", ["Travel", "Outings", "Fashion", "Sports"], key="theme")
 
 # Initialize session state for messages if not present
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Render voice input component
-render_voice_input()
-
-# Text input
-prompt = st.chat_input("Type your message here (or use voice)")
+with st.container():
+    # Top input bar using shadcn ui
+    ui.card(lambda: (
+        ui.input("Type your message here (or use voice)", key="top_text_input"),
+        ui.button("Send", key="send_btn", variant="primary"),
+    ))
+    # Assign from ui input and button
+    prompt = st.session_state.get("top_text_input")
+    send_clicked = bool(st.session_state.get("send_btn"))
+    # Voice input under the bar
+    render_voice_input()
 
 process_input = False
-if prompt:
+if send_clicked and prompt:
     process_input = True
 
 # Check for voice input
@@ -61,9 +73,14 @@ if process_input:
     st.session_state.messages.append({"role": "user", "content": prompt})
     log_message(f"User input: {prompt}")
 
-    # Extract location using LLM
-    extract_prompt = f"Extract the location name from this Japanese query: {prompt}. If no location, return 'NONE'. Respond only with the location or 'NONE'."
-    location = get_user_location() or get_ai_suggestion(extract_prompt).strip()
+    # Extract location using structured LLM output
+    try:
+        loc_struct = get_location_structured(prompt)
+        location = (loc_struct.location or '').strip()
+        location = location if location else 'NONE'
+    except Exception as e:
+        log_message(f"Location extraction parse error: {e}")
+        location = 'NONE'
     log_message(f"Extracted location: {location}")
 
     if location != 'NONE':
@@ -80,41 +97,126 @@ if process_input:
     else:
         weather_str = "No weather information available."
 
-    # Generate AI response with prefs
-    full_prompt = f"Theme: {theme}. Preferences: {get_user_preferences()}. Weather: {weather_str}. User query: {prompt}. Provide a helpful response in Japanese suggesting activities or advice based on the theme and weather. Suggest 3 activities with names, descriptions, ratings, images (use placeholders), and links."
-    log_message(f"Full LLM prompt: {full_prompt}")
-    response = get_ai_suggestion(full_prompt)
-    log_message(f"AI response: {response}")
+    # Generate structured activities and assistant message
+    try:
+        prefs_obj = get_user_preferences()
+        activities_struct = get_activities_structured(
+            theme=theme,
+            preferences_text=str(prefs_obj),
+            weather_text=weather_str,
+            user_query=prompt,
+            location=location if location != 'NONE' else None,
+        )
+        response = activities_struct.message or ""
+        # Convert HttpUrl to strings for rendering safely
+        activities = [
+            a.model_dump(mode="json")  # ensure URLs are serialized as strings
+            for a in activities_struct.activities
+        ]
+    except Exception as e:
+        log_message(f"Activities parsing error: {e}")
+        # Fallback: plain text response
+        fallback_prompt = f"{theme} {prompt} {weather_str}"
+        response = get_ai_suggestion(fallback_prompt)
+        activities = []
 
-    # Parse response into activities (mock parsing)
-    activities = [{'name': 'Activity 1', 'description': 'Desc', 'rating': 4.5, 'image': 'placeholder.jpg', 'link': 'https://example.com'}] * 3  # Parse from response in real impl
+    # Clean response for TTS and safe display
+    clean_response = sanitize_text(response)
 
-    # Translate if needed
-    if lang != 'ja':
-        response = translate_text(response, lang)
+    st.session_state.messages.append({"role": "assistant", "content": clean_response})
 
-    # Clean response for TTS
-    clean_response = re.sub(r'\*\*(.*?)\*\*', r'\1', response)
-    clean_response = re.sub(r'\*(.*?)\*', r'\1', clean_response)
+    # Structured UI layout
+    try:
+        tabs = st.tabs(["Suggestions", "Itinerary", "Map & Weather", "Bookmarks", "Extras"])
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        with tabs[0]:
+            ui.subheader("Suggested Activities")
+            # Metrics row
+            col_a, col_b, col_c = st.columns(3)
+            loc_label = location if location != 'NONE' else '—'
+            temp_label = f"{current['temperature']}°C" if location != 'NONE' and "current_weather" in weather_data else '—'
+            with col_a:
+                st.metric("Location", loc_label)
+            with col_b:
+                st.metric("Temperature", temp_label)
+            with col_c:
+                st.metric("Activities", len(activities))
+            if activities:
+                for act in activities:
+                    render_activity_card(act)
+            else:
+                st.info("No activities available. Try refining your request.")
+            save_and_share(clean_response)
 
-    # Render new features
-    for act in activities:
-        render_activity_card(act)
-    build_itinerary(activities)
-    get_external_info(location)
-    save_and_share(response)
-    render_challenge(theme)
+        with tabs[1]:
+            ui.subheader("Build Your Itinerary")
+            if activities:
+                build_itinerary(activities)
+            else:
+                st.write("Add some activities first from Suggestions.")
+
+        with tabs[2]:
+            ui.subheader("Map & Weather")
+            if location != 'NONE':
+                col_left, col_right = st.columns([2, 1])
+                with col_left:
+                    render_weather_visualization(weather_data if location != 'NONE' else {}, location)
+                with col_right:
+                    st.subheader(f"Current Weather in {location}")
+                    if "error" not in weather_data:
+                        cw = weather_data.get('current_weather', {})
+                        if cw:
+                            st.metric("Temp", f"{cw.get('temperature', '—')}°C")
+                            st.metric("Wind", f"{cw.get('windspeed', '—')} km/h")
+                            st.metric("Code", f"{cw.get('weathercode', '—')}")
+                    else:
+                        st.write("Weather data not available.")
+            else:
+                st.write("No location found.")
+
+        with tabs[3]:
+            ui.subheader("Bookmarks")
+            bmarks = st.session_state.get('bookmarked_activities', [])
+            if bmarks:
+                # Summary table
+                try:
+                    table_rows = [{
+                        'Name': b.get('name', ''),
+                        'Rating': b.get('rating', ''),
+                        'Link': b.get('link', ''),
+                    } for b in bmarks]
+                    st.dataframe(table_rows, use_container_width=True)
+                except Exception:
+                    pass
+                # Cards
+                for b in bmarks:
+                    render_activity_card(b)
+            else:
+                st.write("No bookmarks yet.")
+
+        with tabs[4]:
+            ui.subheader("Extras")
+            render_challenge(theme)
+            get_external_info(location)
+    except Exception as e:
+        log_message(f"Error in rendering features: {e}")
+        st.error("An error occurred while rendering additional features.")
 
     # Generate TTS with cleaned text
     audio_file = generate_tts(clean_response)
-    log_message(f"TTS file generated: {audio_file}")
-    st.session_state.tts_file = audio_file
+    if audio_file:
+        log_message(f"TTS file generated: {audio_file}")
+        st.session_state.tts_file = audio_file
+    else:
+        st.warning("TTS generation failed.")
 
 # Display chat history
 display_chat_history()
 
-# Render weather and TTS components
-render_weather_component()
+# Render TTS component
 render_tts_output()
+
+# Clear send state after processing
+if process_input:
+    st.session_state["top_text_input"] = ""
+    st.session_state["send_btn"] = False

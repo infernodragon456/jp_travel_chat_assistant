@@ -11,4 +11,6 @@ altair
 folium
 streamlit-folium
 icalendar
-googletrans==4.0.0-rc1
+bleach
+pydantic>=2.0.0
+streamlit-shadcn-ui
