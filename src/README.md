@@ -8,11 +8,6 @@ This is a Streamlit-based chatbot that supports Japanese voice input using Whisp
 2. Set `GROQ_API_KEY` in environment variables or in `.streamlit/secrets.toml`.
 3. Run the app: `streamlit run src/main.py`
 
-## Deployment
-- Push the repository to GitHub (public).
-- Deploy on Streamlit Community Cloud by connecting the repo and setting the `GROQ_API_KEY` secret.
-- Alternative: Use Render.com free tier.
-
 ## Japanese Input/Voice Features
 - Voice input is handled via browser microphone with Whisper transcription for Japanese.
 - Responses are in Japanese with TTS audio playback.
